@@ -52,12 +52,12 @@ resource "aws_route_table" "prod-route-table" {
   }
 }
 
-# # 4. Create a Subnet 
+# # 4. Create a Subnet
 
 resource "aws_subnet" "subnet-1" {
   vpc_id = aws_vpc.prod-vpc.id
   cidr_block = "10.0.1.0/24"
-  availability_zone = "us-east-1a"
+  availability_zone = "us-west-2a"
 
   tags = {
     Name = "prod-subnet"
@@ -85,7 +85,7 @@ resource "aws_security_group" "allow_web" {
 
 resource "aws_vpc_security_group_ingress_rule" "allow_https_ipv4" {
   security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = [0.0.0.0/0]
+  cidr_ipv4         = "0.0.0.0/0"
   from_port         = 443
   ip_protocol       = "tcp"
   to_port           = 443
@@ -101,7 +101,7 @@ resource "aws_vpc_security_group_ingress_rule" "allow_https_ipv4" {
 
 resource "aws_vpc_security_group_ingress_rule" "allow_http_ipv4" {
   security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = [0.0.0.0/0]
+  cidr_ipv4         = "0.0.0.0/0"
   from_port         = 80
   ip_protocol       = "tcp"
   to_port           = 80
@@ -109,7 +109,7 @@ resource "aws_vpc_security_group_ingress_rule" "allow_http_ipv4" {
 
 resource "aws_vpc_security_group_ingress_rule" "allow_ssh_ipv4" {
   security_group_id = aws_security_group.allow_web.id
-  cidr_ipv4         = [0.0.0.0/0]
+  cidr_ipv4         = "0.0.0.0/0"
   from_port         = 22
   ip_protocol       = "tcp"
   to_port           = 22
@@ -138,7 +138,6 @@ resource "aws_network_interface" "web-server-nic" {
 # # 8. Assign an elastic IP to the network interface created in step 7
 
 resource "aws_eip" "one" {
-  domain                    = "vpc"
   network_interface         = aws_network_interface.web-server-nic.id
   associate_with_private_ip = "10.0.1.50"
   depends_on                = [aws_internet_gateway.gw]
@@ -147,23 +146,19 @@ resource "aws_eip" "one" {
 # # 9. Create Ubuntu server and install/enable apache2
 
 resource "aws_instance" "web-server-instance"{
-  ami               = "ami-085925f297f89fce1"
+  ami               = "ami-0cf2b4e024cdb6960"
   instance_type     = "t2.micro"
-  availability_zone = "us-east-1a"
-  key_name = "templlc"
+  availability_zone = "us-west-2a"
+  key_name = "templlc2"
 
   network_interface {
     device_index = 0
     network_interface_id = aws_network_interface.web-server-nic.id
   }
 
-  user_data = <<-EOF
-                #!bin/bash
-                sudo apt update -y
-                sudo systemctl start apache2
-                sudo bash -c 'echo your first web server > /var/www/html/index.html
-                EOF
+  user_data = file("${path.module}/startupscript.sh")
+
   tags = {
     Name = "web-server"
-  }              
+  }
 }
